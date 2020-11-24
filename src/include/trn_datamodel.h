@@ -148,3 +148,17 @@ struct scaled_endpoint_remote_t {
 	unsigned char h_source[6];
 	unsigned char h_dest[6];
 } __attribute__((packed));
+
+/* 
+ * Common stats data record shared between user program and kernel program
+ */
+struct metrics_record {
+	__u64 n_pkts; /* # of pkts received */
+	__u64 total_bytes_rx; /* to calcualte rx bandwidth */
+	__u64 total_bytes_tx; /* to calcualte tx bandwidth */
+	__u64 n_tx; /* TX PPS for the Bouncer (which is symmetric) == RX PPS for the bouncer */
+	__u64 n_pass; /* forwarded to kernel */
+	__u64 n_drop; /* packets to be dropped*/
+	__u64 n_redirect; /* packets to be redirected*/
+	__u64 n_aborted;
+} __attribute__((packed));

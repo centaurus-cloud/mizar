@@ -103,13 +103,14 @@ int trn_bpf_maps_init(struct user_metadata_t *md)
 	md->ep_flow_host_cache = bpf_map__next(md->rev_flow_mod_cache, md->obj);
 	md->ep_host_cache = bpf_map__next(md->ep_flow_host_cache, md->obj);
 	md->xdpcap_hook_map = bpf_map__next(md->ep_host_cache, md->obj);
+	md->metrics_table_map = bpf_map__next(md->xdpcap_hook_map, md->obj);
 
 	if (!md->networks_map || !md->vpc_map || !md->endpoints_map ||
-	    !md->port_map || !md->hosted_endpoints_iface_map ||
-	    !md->interface_config_map || !md->interfaces_map ||
-	    !md->fwd_flow_mod_cache || !md->rev_flow_mod_cache ||
-	    !md->ep_flow_host_cache || !md->ep_host_cache ||
-	    !md->xdpcap_hook_map || !md->jmp_table_map) {
+	    !md->port_map || !md->hosted_endpoints_iface_map || !md->interface_config_map ||
+	    !md->interfaces_map || !md->fwd_flow_mod_cache ||
+	    !md->rev_flow_mod_cache || !md->ep_flow_host_cache ||
+	    !md->ep_host_cache || !md->xdpcap_hook_map || !md->jmp_table_map ||
+	    !md->metrics_table_map) {
 		TRN_LOG_ERROR("Failure finding maps objects.");
 		return 1;
 	}
@@ -127,6 +128,7 @@ int trn_bpf_maps_init(struct user_metadata_t *md)
 	md->rev_flow_mod_cache_fd = bpf_map__fd(md->rev_flow_mod_cache);
 	md->ep_flow_host_cache_fd = bpf_map__fd(md->ep_flow_host_cache);
 	md->ep_host_cache_fd = bpf_map__fd(md->ep_host_cache);
+	md->metrics_table_map_fd = bpf_map__fd(md->metrics_table_map);
 
 	if (bpf_map__unpin(md->xdpcap_hook_map, md->pcapfile) == 0) {
 		TRN_LOG_INFO("unpin exiting pcap map file: %s", md->pcapfile);
@@ -318,6 +320,7 @@ int trn_add_prog(struct user_metadata_t *md, unsigned int prog_idx,
 	_SET_INNER_MAP(rev_flow_mod_cache);
 	_SET_INNER_MAP(ep_flow_host_cache);
 	_SET_INNER_MAP(ep_host_cache);
+	_SET_INNER_MAP(metrics_table_map);
 
 	/* Only one prog is supported */
 	bpf_object__for_each_program(prog, stage->obj)
@@ -354,6 +357,7 @@ int trn_add_prog(struct user_metadata_t *md, unsigned int prog_idx,
 	_UPDATE_INNER_MAP(rev_flow_mod_cache);
 	_UPDATE_INNER_MAP(ep_flow_host_cache);
 	_UPDATE_INNER_MAP(ep_host_cache);
+	_UPDATE_INNER_MAP(metrics_table_map);
 
 	return 0;
 error:

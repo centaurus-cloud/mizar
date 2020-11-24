@@ -123,6 +123,9 @@ struct vlan_hdr {
 };
 
 struct transit_packet {
+	/* pointer to the metrics recorder */
+	struct metrics_record *rec;
+
 	void *data;
 	void *data_end;
 
