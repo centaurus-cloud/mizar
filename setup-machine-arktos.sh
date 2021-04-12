@@ -5,7 +5,14 @@
 echo Setup: Install go \(currently limited to version 1.13.9\)
 
 sudo apt-get update -y -q
-sudo apt-get install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev -y -q
+sudo apt-get install libreadline-gplv2-dev -y -q
+sudo apt-get install libncursesw5-dev -y -q
+sudo apt-get install libssl-dev -y -q
+sudo apt-get install libsqlite3-dev -y -q
+sudo apt-get install tk-dev -y -q
+sudo apt-get install libgdbm-dev -y -q
+sudo apt-get install libc6-dev -y -q
+sudo apt-get install libbz2-dev -y -q
 
 cd /tmp
 wget https://dl.google.com/go/go1.13.9.linux-amd64.tar.gz
@@ -162,6 +169,10 @@ echo alias status=\"git status\" >> ~/.profile
 echo alias pods=\"kubectl get pods -A -o wide\" >> ~/.profile
 echo alias nets=\"echo 'kubectl get subnets'\; kubectl get subnets\; echo\; echo 'kubectl get droplets'\; kubectl get droplets\; echo\; echo 'kubectl get bouncers'\; kubectl get bouncers\; echo\; echo 'kubectl get dividers'\; kubectl get dividers\; echo\; echo 'kubectl get vpcs'\; kubectl get vpcs\; echo\; echo 'kubectl get eps'\; kubectl get eps\; echo\; echo 'kubectl get networks'\; kubectl get networks\" >> ~/.profile
 
+echo alias kubectl=\"\$HOME/go/src/k8s.io/arktos/cluster/kubectl.sh\" >> ~/.profile
+echo alias kubeop=\"kubectl get pods \| grep mizar-operator \| awk \'{print \$1}\' \| xargs -i kubectl logs \{\}\" >> ~/.profile
+echo alias kubed=\"kubectl get pods \| grep mizar-daemon \| awk \'{print \$1}\' \| xargs -i kubectl logs \{\}\" >> ~/.profile
+
 echo export PYTHONPATH=\"\$HOME/mizar/\" >> ~/.profile
 echo export GPG_TTY=\$\(tty\) >> ~/.profile
 
@@ -178,6 +189,15 @@ git clone https://github.com/kubernetes/test-infra.git
 cd ~/go/src/k8s.io/test-infra/
 GO111MODULE=on go install ./kubetest
 GO111MODULE=on go mod vendor
+
+####################
+
+echo Setup: Update containerd version to v1.4.2
+
+cd $HOME
+wget https://github.com/containerd/containerd/releases/download/v1.4.2/containerd-1.4.2-linux-amd64.tar.gz
+cd /usr
+sudo tar xvf $HOME/containerd-1.4.2-linux-amd64.tar.gz
 
 ####################
 

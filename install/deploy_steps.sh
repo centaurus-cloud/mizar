@@ -44,3 +44,13 @@ function deploy_steps:deploy_mizar {
 function deploy_steps:sanity_check {
     :
 }
+
+function deploy_steps:install_mizar_cni_in_arktos {
+    sudo rm /etc/cni/net.d/bridge.conf
+    sudo cp -rf $HOME/mizar /var
+    sudo cp $HOME/mizar/etc/docker/node-init.sh /
+    sudo chmod u+x /node-init.sh
+    sudo /bin/bash /node-init.sh
+    sudo systemctl restart containerd.service
+}
+

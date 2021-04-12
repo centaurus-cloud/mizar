@@ -46,6 +46,7 @@ source install/deploy_steps.sh
 common:source_environment_adaptor $mizar_environment
 
 # Execute deploy step by step
+deploy_steps:install_mizar_cni_in_arktos
 deploy_steps:binaries_ready $is_mizar_production
 deploy_steps:environment_ready $is_mizar_production
 deploy_steps:deploy_mizar $is_mizar_production
