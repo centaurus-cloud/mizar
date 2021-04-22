@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option go_package = "mizar.com/crds-operators/grpc/dividers";
+option java_multiple_files = true;
+option java_package = "io.crds-operators.grpc.dividers";
+option java_outer_classname = "DividersProto";
+
+package dividers;
+
+
+// service
+service DividersService { 
+    rpc CreateDivider(Divider) returns (Empty) {}
+    rpc UpdateDivider(Divider) returns (Empty) {}
+    rpc ReadDivider(DividerId) returns (DividersResponse) {}
+    rpc DeleteDivider(DividerId) returns (Empty) {}
+    rpc ResumeDivider(DividerId) returns (Empty) {}
+}
+
+// requests
+message Divider {
+  string vpc = 1;
+  string Ip = 2;
+  string Mac = 3;
+  string Droplet = 4;
+  string Status = 5;
+  string CreateTime = 6;
+  string ProvisionDelay = 7;
+}
+
+message DividerId {
+  string Id = 1;
+}
+
+//response
+message Empty {}
+
+message DividersResponse {
+    string json_returncode = 1;
+}

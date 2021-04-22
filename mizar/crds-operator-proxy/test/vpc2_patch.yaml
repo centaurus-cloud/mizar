@@ -1,0 +1,6 @@
+apiVersion: "mizar.com/v1"
+kind: Vpc
+metadata:
+  name: vpc2
+spec:
+  status: Stop

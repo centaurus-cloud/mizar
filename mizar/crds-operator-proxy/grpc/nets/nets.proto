@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option go_package = "mizar.com/crds-operators/grpc/nets";
+option java_multiple_files = true;
+option java_package = "io.crds-operators.grpc.nets";
+option java_outer_classname = "NetsProto";
+
+package nets;
+
+// service
+service NetsService { 
+    rpc CreateNet(Net) returns (Empty) {}
+    rpc UpdateNet(Net) returns (Empty) {}
+    rpc ReadNet(NetId) returns (NetsResponse) {}
+    rpc DeleteNet(NetId) returns (Empty) {}
+    rpc ResumeNet(NetId) returns (Empty) {}
+}
+
+// requests
+message Net {
+  string Ip = 1;
+  string Prefix = 2;
+  string Vni = 3;
+  string Vpc = 4;
+  string Status = 5;
+  string Bouncers = 6;
+  string CreateTime = 7;
+  string ProvisionDelay = 8;
+}
+
+message NetId {
+  string Id = 1;
+}
+
+//response
+message Empty {}
+
+message NetsResponse {
+    string json_returncode = 1;
+}
+
+

@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option go_package = "mizar.com/crds-operator-proxy/grpc/vpcs";
+option java_multiple_files = true;
+option java_package = "io.crds-operator-proxy.grpc.vpcs";
+option java_outer_classname = "VpcsProto";
+
+package vpcs;
+
+
+// service
+service VpcsService { 
+    rpc CreateVpc(Vpc) returns (Empty) {}
+    rpc UpdateVpc(Vpc) returns (Empty) {}
+    rpc ReadVpc(VpcId) returns (VpcsResponse) {}
+    rpc DeleteVpc(VpcId) returns (Empty) {}
+    rpc ResumeVpc(VpcId) returns (Empty) {}
+}
+
+// requests
+message Vpc {
+  string Ip = 1;
+  string Prefix = 2;
+  string Vni = 3;
+  string Dividers = 4;
+  string Status = 5;
+  string CreateTime = 6;
+  string ProvisionDelay = 7;
+}
+
+message VpcId {
+  string Id = 1;
+}
+
+//response
+message Empty {}
+
+message VpcsResponse {
+    string json_returncode = 1;
+}

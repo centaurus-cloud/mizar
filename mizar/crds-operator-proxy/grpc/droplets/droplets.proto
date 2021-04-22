@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option go_package = "mizar.com/crds-operators/grpc/droplets";
+option java_multiple_files = true;
+option java_package = "io.crds-operators.grpc.droplets";
+option java_outer_classname = "DropletsProto";
+
+package droplets;
+
+// service
+service DropletsService { 
+    rpc CreateDroplet(Droplet) returns (Empty) {}
+    rpc UpdateDroplet(Droplet) returns (Empty) {}
+    rpc ReadDroplet(DropletId) returns (DropletsResponse) {}
+    rpc DeleteDroplet(DropletId) returns (Empty) {}
+    rpc ResumeDroplet(DropletId) returns (Empty) {}
+}
+
+// requests
+message Droplet {
+  string Mac = 1;
+  string Ip = 2;
+  string Status = 3;
+  string Interface = 4;
+  string CreateTime = 5;
+  string ProvisionDelay = 6;
+}
+
+message DropletId {
+  string Id = 1;
+}
+
+//response
+message Empty {}
+
+message DropletsResponse {
+    string json_returncode = 1;
+}
+
+

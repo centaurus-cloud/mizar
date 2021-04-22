@@ -1,0 +1,11 @@
+apiVersion: "mizar.com/v1"
+kind: Net
+metadata:
+  name: net2
+spec:
+  vpc: "vpc1"
+  vni: "0"
+  ip: "12.0.2.0"
+  prefix: "24"
+  status: "Init"
+  bouncers: "2"

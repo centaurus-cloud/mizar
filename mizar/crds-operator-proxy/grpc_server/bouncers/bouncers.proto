@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+option go_package = "mizar.com/crds-operators/grpc_server/bouncers";
+option java_multiple_files = true;
+option java_package = "io.crds-operators.grpc_server.bouncers";
+option java_outer_classname = "BouncersProto";
+
+package bouncers;
+
+
+// service
+service BouncersService { 
+    rpc CreateBouncer(Bouncer) returns (Empty) {}
+    rpc UpdateBouncer(Bouncer) returns (Empty) {}
+    rpc ReadBouncer(BouncerId) returns (BouncersResponse) {}
+    rpc DeleteBouncer(BouncerId) returns (Empty) {}
+    rpc ResumeBouncer(BouncerId) returns (Empty) {}
+}
+
+// requests
+message Bouncer {
+  string Vpc = 1;
+  string Net = 2;
+  string Ip = 3;
+  string Mac = 4;
+  string Droplet = 5;
+  string Status = 6;
+  string CreateTime = 7;
+  string ProvisionDelay = 8;
+}
+
+message BouncerId {
+  string Id = 1;
+}
+
+//response
+message Empty {}
+
+message BouncersResponse {
+    string json_returncode = 1;
+}

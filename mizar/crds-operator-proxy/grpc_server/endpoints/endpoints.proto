@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+option go_package = "mizar.com/crds-operators/grpc_server/endpoints";
+option java_multiple_files = true;
+option java_package = "io.crds-operators.grpc_server.endpoints";
+option java_outer_classname = "EndpointsProto";
+
+package endpoints;
+
+
+// service
+service EndpointsService { 
+    rpc CreateEndpoint(Endpoint) returns (Empty) {}
+    rpc UpdateEndpoint(Endpoint) returns (Empty) {}
+    rpc ReadEndpoint(EndpointId) returns (EndpointsResponse) {}
+    rpc DeleteEndpoint(EndpointId) returns (Empty) {}
+    rpc ResumeEndpoint(EndpointId) returns (Empty) {}
+}
+
+// requests
+message Endpoint {
+  string Type = 1;
+  string Mac = 2;
+  string Ip = 3;
+  string Gw = 4;
+  string Status = 5;
+  string Network = 6;
+  string Vpc = 7;
+  string Vni = 8;
+  string Droplet = 9;
+  string Interface = 10;
+  string Veth = 11;
+  string HostIp = 12;
+  string HostMac = 13;
+  string CreateTime = 14;
+  string ProvisionDelay = 15;
+  string CniDelay = 16;
+}
+
+message EndpointId {
+  string Id = 1;
+}
+
+//response
+message Empty {}
+
+message EndpointsResponse {
+    string json_returncode = 1;
+}
+
+
+
