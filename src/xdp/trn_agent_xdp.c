@@ -168,8 +168,10 @@ static __inline int trn_encapsulate(struct transit_packet *pkt,
 	/* Readjust the packet size to fit the outer headers */
 	int gnv_rts_opt_size = sizeof(*pkt->rts_opt);
 	int gnv_scaled_ep_opt_size = sizeof(*pkt->scaled_ep_opt);
+	int gnv_pod_label_value_opt_size = sizeof(*pkt->pod_label_value_opt);
+	int gnv_namespace_label_value_opt_size = sizeof(*pkt->namespace_label_value_opt);
 
-	int gnv_opt_size = gnv_rts_opt_size + gnv_scaled_ep_opt_size;
+	int gnv_opt_size = gnv_rts_opt_size + gnv_scaled_ep_opt_size + gnv_pod_label_value_opt_size + gnv_namespace_label_value_opt_size;
 	int gnv_hdr_size = sizeof(*pkt->geneve) + gnv_opt_size;
 	int udp_hdr_size = sizeof(*pkt->udp);
 	int ip_hdr_size = sizeof(*pkt->ip);
@@ -199,11 +201,15 @@ static __inline int trn_encapsulate(struct transit_packet *pkt,
 	pkt->geneve = (void *)pkt->udp + udp_hdr_size;
 	pkt->rts_opt = (void *)&pkt->geneve->options[0];
 	pkt->scaled_ep_opt = (void *)pkt->rts_opt + sizeof(*pkt->rts_opt);
+	pkt->pod_label_value_opt = (void *)pkt->scaled_ep_opt + sizeof(*pkt->scaled_ep_opt);
+	pkt->namespace_label_value_opt = (void *)pkt->pod_label_value_opt + sizeof(*pkt->pod_label_value_opt);
 
 	if (pkt->eth + 1 > pkt->data_end || pkt->ip + 1 > pkt->data_end ||
 	    pkt->udp + 1 > pkt->data_end || pkt->geneve + 1 > pkt->data_end ||
 	    pkt->rts_opt + 1 > pkt->data_end ||
-	    pkt->scaled_ep_opt + 1 > pkt->data_end) {
+	    pkt->scaled_ep_opt + 1 > pkt->data_end ||
+	    pkt->pod_label_value_opt + 1 > pkt->data_end ||
+	    pkt->namespace_label_value_opt + 1 > pkt->data_end) {
 		bpf_debug("[Agent:%ld.0x%x] ABORTED: Bad offset [%d]\n",
 			  pkt->agent_ep_tunid, bpf_ntohl(pkt->agent_ep_ipv4),
 			  __LINE__);
@@ -259,6 +265,16 @@ static __inline int trn_encapsulate(struct transit_packet *pkt,
 	pkt->scaled_ep_opt->length = 0;
 	__builtin_memset(&pkt->scaled_ep_opt->scaled_ep_data, 0,
 			 sizeof(struct trn_gnv_scaled_ep_data));
+
+	pkt->pod_label_value_opt->opt_class = TRN_GNV_OPT_CLASS;
+	pkt->pod_label_value_opt->type = TRN_GNV_LABEL_VALUE_OPT_TYPE;
+	pkt->pod_label_value_opt->length = sizeof(pkt->pod_label_value_opt->label_value_data) / 4;
+	pkt->pod_label_value_opt->label_value_data.value = pod_label_value;
+
+	pkt->namespace_label_value_opt->opt_class = TRN_GNV_OPT_CLASS;
+	pkt->namespace_label_value_opt->type = TRN_GNV_LABEL_VALUE_OPT_TYPE;
+	pkt->namespace_label_value_opt->length = sizeof(pkt->namespace_label_value_opt->label_value_data) / 4;;
+	pkt->namespace_label_value_opt->label_value_data.value = namespace_label_value;
 
 	/* If the source and dest address of the tunneled packet is the
 	 * same, then this host is also a transit switch. Just invoke the

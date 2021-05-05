@@ -54,6 +54,7 @@
 #define TRN_GNV_OPT_CLASS 0x0111
 #define TRN_GNV_RTS_OPT_TYPE 0x48
 #define TRN_GNV_SCALED_EP_OPT_TYPE 0x49
+#define TRN_GNV_LABEL_VALUE_OPT_TYPE 0x50
 
 /* Scaled endpoint messages type */
 #define TRN_SCALED_EP_MODIFY 0x4d // (M: Modify)
@@ -76,6 +77,21 @@ struct trn_gnv_scaled_ep_opt {
 	__u8 r1 : 1;
 	/* opt data */
 	struct trn_gnv_scaled_ep_data scaled_ep_data;
+} __attribute__((packed, aligned(4)));
+
+struct trn_gnv_label_value_data {
+	__u32 value;
+} __attribute__((packed, aligned(4)));
+
+struct trn_gnv_label_value_opt {
+	__be16 opt_class;
+	__u8 type;
+	__u8 length : 5;
+	__u8 r3 : 1;
+	__u8 r2 : 1;
+	__u8 r1 : 1;
+	/* opt data */
+	struct trn_gnv_label_value_data label_value_data;
 } __attribute__((packed, aligned(4)));
 
 struct trn_gnv_rts_data {
@@ -147,6 +163,8 @@ struct transit_packet {
 	struct genevehdr *geneve;
 	struct trn_gnv_rts_opt *rts_opt;
 	struct trn_gnv_scaled_ep_opt *scaled_ep_opt;
+	struct trn_gnv_label_value_opt *pod_label_value_opt;
+	struct trn_gnv_label_value_opt *namespace_label_value_opt;
 	int gnv_hdr_len;
 	int gnv_opt_len;
 
