@@ -49,7 +49,6 @@ int trn_cli_update_ep_subcmd(CLIENT *clnt, int argc, char *argv[])
 	char hosted_itf[20];
 	uint32_t remote_ips[RPC_TRN_MAX_REMOTE_IPS];
 	ep.remote_ips.remote_ips_val = remote_ips;
-	ep.remote_ips.remote_ips_len = 0;
 	ep.veth = veth;
 	ep.hosted_interface = hosted_itf;
 	ep.interface = conf.intf;

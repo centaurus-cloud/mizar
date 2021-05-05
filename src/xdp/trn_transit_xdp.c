@@ -45,6 +45,7 @@
 #include "trn_datamodel.h"
 #include "trn_transit_xdp_maps.h"
 #include "trn_kern.h"
+#include "conntrack_common.h"
 
 int _version SEC("version") = 1;
 
@@ -354,7 +355,7 @@ static __inline int trn_handle_scaled_ep_modify(struct transit_packet *pkt)
 	//trn_update_ep_host_cache(pkt, tunnel_id, out_tuple.daddr);
 
 	/* Prepare the inner packet for forwarding*/
-	//TODO: for now only change the IP addresses (no ports)
+	trn_set_src_dst_port(pkt, out_tuple.sport, out_tuple.dport);
 	trn_set_src_dst_inner_ip_csum(pkt, out_tuple.saddr, out_tuple.daddr);
 
 	/* Prepare the outer packet for forwarding*/
@@ -443,11 +444,43 @@ static __inline int trn_process_inner_ip(struct transit_packet *pkt)
 		pkt->inner_ipv4_tuple.dport = pkt->inner_udp->dest;
 	}
 
-	/* Lookup the source endpoint*/
 	__be64 tunnel_id = trn_vni_to_tunnel_id(pkt->geneve->vni);
+
+	if (pkt->inner_ipv4_tuple.protocol == IPPROTO_TCP || pkt->inner_ipv4_tuple.protocol == IPPROTO_UDP) {
+		__u8 *tracked_state = get_originated_conn_state(&conn_track_cache, tunnel_id, &pkt->inner_ipv4_tuple);
+		// todo: only check for bi-directional connections
+		if (NULL != tracked_state) {
+			// reply packet is usually allowed, unless re-eval blocks it
+			if (0 != ingress_reply_packet_check(tunnel_id, &pkt->inner_ipv4_tuple, *tracked_state))
+			{
+				bpf_debug("[Transit:vpc 0x%lx] ABORTED: packet to 0x%x from 0x%x ingress denied, reply of a denied conn\n",
+					tunnel_id,
+					bpf_ntohl(pkt->inner_ipv4_tuple.daddr),
+					bpf_ntohl(pkt->inner_ipv4_tuple.saddr));
+				return XDP_ABORTED;
+			}
+		} else {
+			// originated-directional packet subjects to policy check, if required so
+			if (0 != ingress_policy_check(tunnel_id, &pkt->inner_ipv4_tuple)){
+				bpf_debug(
+					"[Transit:vpc 0x%lx] ABORTED: packet to 0x%x from 0x%x ingress policy denied\n",
+					tunnel_id,
+					bpf_ntohl(pkt->inner_ipv4_tuple.daddr),
+					bpf_ntohl(pkt->inner_ipv4_tuple.saddr));
+				__u8 conn_denied = (pkt->inner_ipv4_tuple.protocol == IPPROTO_UDP) ? FLAG_REEVAL | TRFFIC_DENIED : TRFFIC_DENIED;
+				conntrack_set_conn_state(&conn_track_cache, tunnel_id, &pkt->inner_ipv4_tuple, conn_denied);
+				return XDP_ABORTED;
+			}
+
+			// todo: consider to handle error in case it happens
+			__u8 conn_allowed = (pkt->inner_ipv4_tuple.protocol == IPPROTO_UDP) ? FLAG_REEVAL : 0;
+			conntrack_set_conn_state(&conn_track_cache, tunnel_id, &pkt->inner_ipv4_tuple, conn_allowed);
+		}
+	}
+
+	/* Lookup the source endpoint*/
 	struct endpoint_t *src_ep;
 	struct endpoint_key_t src_epkey;
-
 	__builtin_memcpy(&src_epkey.tunip[0], &tunnel_id, sizeof(tunnel_id));
 	src_epkey.tunip[2] = pkt->inner_ip->saddr;
 	src_ep = bpf_map_lookup_elem(&endpoints_map, &src_epkey);
@@ -470,6 +503,7 @@ static __inline int trn_process_inner_ip(struct transit_packet *pkt)
 	inner_mod = bpf_map_lookup_elem(&rev_flow_mod_cache, &inner);
 	if (inner_mod) {
 		/* Modify the inner packet accordingly */
+		trn_set_src_dst_port(pkt, inner_mod->sport, inner_mod->dport);
 		trn_set_src_dst_inner_ip_csum(pkt, inner_mod->saddr,
 					      inner_mod->daddr);
 		trn_set_src_mac(pkt->inner_eth, inner_mod->h_source);

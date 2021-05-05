@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: arktospoddefault1
+  labels:
+    arktos.futurewei.com/network: vpc0
+  annotations:
+    arktos.futurewei.com/nic: "[{\"name\": \"eth0\"}]"
+spec:
+  containers:
+  - name: arktospoddefault1
+    image: localhost:5000/testpod
+    ports:
+      - containerPort: 443

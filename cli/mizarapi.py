@@ -36,13 +36,13 @@ class MizarApi:
             "vpc": vpc,
             "bouncers": bouncers
         }
-        self.create_obj(name, "Net", spec, "nets")
+        self.create_obj(name, "Subnet", spec, "subnets")
 
         logger.debug("Created {} {}".format("Network", name))
 
     def delete_net(self, name):
         logger.info("Delete a network!!!")
-        self.delete_obj(name, "nets")
+        self.delete_obj(name, "subnets")
 
     def create_obj(self, name, kind, spec, plural):
         spec["status"] = "Init"

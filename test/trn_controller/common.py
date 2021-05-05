@@ -18,16 +18,16 @@ logger = logging.getLogger("transit_test")
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 
-
 class CONSTANTS:
     TRAN_SUBSTRT_EP = 0
     TRAN_SIMPLE_EP = 1
     TRAN_SCALED_EP = 2
-    ON_XDP_TX       = "ON_XDP_TX"
-    ON_XDP_PASS     = "ON_XDP_PASS"
+    ON_XDP_TX = "ON_XDP_TX"
+    ON_XDP_PASS = "ON_XDP_PASS"
     ON_XDP_REDIRECT = "ON_XDP_REDIRECT"
-    ON_XDP_DROP     = "ON_XDP_DROP"
+    ON_XDP_DROP = "ON_XDP_DROP"
     ON_XDP_SCALED_EP = "ON_XDP_SCALED_EP"
+
 
 class cidr:
     def __init__(self, prefixlen, ip):

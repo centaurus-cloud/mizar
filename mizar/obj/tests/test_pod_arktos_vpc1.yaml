@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: arktospodvpc1net1
+  labels:
+    arktos.futurewei.com/network: my-net-mizar-1
+  annotations:
+    arktos.futurewei.com/nic: "[{\"name\": \"eth0\", \"ip\": \"20.0.0.14\", \"subnet\": \"net0\"}]"
+spec:
+  containers:
+  - name: arktospodvpc1net1
+    image: mizarnet/testpod
+    ports:
+      - containerPort: 443

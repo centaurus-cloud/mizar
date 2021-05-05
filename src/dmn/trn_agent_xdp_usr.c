@@ -26,6 +26,19 @@
 #include "extern/linux/err.h"
 #include "trn_agent_xdp_usr.h"
 #include "trn_log.h"
+#include "shared_map_names.h"
+
+#define _REUSE_MAP_IF_PINNED(map)                                        	\
+	do {									\
+		int err_code;							\
+		if (0 != (err_code = _reuse_pinned_map_if_exists(md->obj, 	\
+			#map, 							\
+			map##_path)))						\
+		{ 								\
+			TRN_LOG_INFO("failed to reuse shared map at %s, error code %d\n", map##_path, err_code); \
+			return 1;						\
+		}								\
+	} while (0)
 
 static int def_fwd_flow_mod_cache_map_fd = -1;
 static int def_rev_flow_mod_cache_map_fd = -1;
@@ -238,12 +251,37 @@ int trn_agent_delete_endpoint(struct agent_user_metadata_t *umd,
 	return 0;
 }
 
+int trn_agent_update_packet_metadata(struct agent_user_metadata_t *umd,
+			      struct packet_metadata_key_t *key,
+			      struct packet_metadata_t *packet_metadata)
+{
+	int err = bpf_map_update_elem(umd->packet_metadata_map_fd, key, packet_metadata, 0);
+	if (err) {
+		TRN_LOG_ERROR("Store packet metadata mapping failed (err:%d).", err);
+		return 1;
+	}
+	return 0;
+}
+
+int trn_agent_delete_packet_metadata(struct agent_user_metadata_t *umd,
+			      struct packet_metadata_key_t *key)
+{
+	int err = bpf_map_delete_elem(umd->packet_metadata_map_fd, key);
+	if (err) {
+		TRN_LOG_ERROR(
+			"Deleting packet metadata mapping failed (err:%d).", err);
+		return 1;
+	}
+	return 0;
+}
+
 int trn_agent_bpf_maps_init(struct agent_user_metadata_t *md)
 {
 	md->jmp_table_map = bpf_map__next(NULL, md->obj);
 	md->agentmetadata_map = bpf_map__next(md->jmp_table_map, md->obj);
 	md->endpoints_map = bpf_map__next(md->agentmetadata_map, md->obj);
-	md->interfaces_map = bpf_map__next(md->endpoints_map, md->obj);
+	md->packet_metadata_map = bpf_map__next(md->endpoints_map, md->obj);
+	md->interfaces_map = bpf_map__next(md->packet_metadata_map, md->obj);
 	md->xdpcap_hook_map = bpf_map__next(md->interfaces_map, md->obj);
 	md->fwd_flow_mod_cache_ref =
 		bpf_map__next(md->xdpcap_hook_map, md->obj);
@@ -253,11 +291,28 @@ int trn_agent_bpf_maps_init(struct agent_user_metadata_t *md)
 		bpf_map__next(md->rev_flow_mod_cache_ref, md->obj);
 	md->ep_host_cache_ref =
 		bpf_map__next(md->ep_flow_host_cache_ref, md->obj);
+	md->eg_vsip_enforce_map = bpf_map__next(md->ep_host_cache_ref, md->obj);
+	md->eg_vsip_prim_map = bpf_map__next(md->eg_vsip_enforce_map, md->obj);
+	md->eg_vsip_ppo_map = bpf_map__next(md->eg_vsip_prim_map, md->obj);
+	md->eg_vsip_supp_map = bpf_map__next(md->eg_vsip_ppo_map, md->obj);
+	md->eg_vsip_except_map = bpf_map__next(md->eg_vsip_supp_map, md->obj);
+	md->ing_vsip_enforce_map = bpf_map__next(md->eg_vsip_except_map, md->obj);
+	md->ing_vsip_prim_map = bpf_map__next(md->ing_vsip_enforce_map, md->obj);
+	md->ing_vsip_ppo_map = bpf_map__next(md->ing_vsip_prim_map, md->obj);
+	md->ing_vsip_supp_map = bpf_map__next(md->ing_vsip_ppo_map, md->obj);
+	md->ing_vsip_except_map = bpf_map__next(md->ing_vsip_supp_map, md->obj);
+	md->conn_track_cache = bpf_map__next(md->ing_vsip_except_map, md->obj);
 
 	if (!md->jmp_table_map || !md->agentmetadata_map ||
-	    !md->endpoints_map | !md->xdpcap_hook_map ||
+	    !md->endpoints_map || !md->xdpcap_hook_map ||
 	    !md->fwd_flow_mod_cache_ref || !md->rev_flow_mod_cache_ref ||
-	    !md->ep_flow_host_cache_ref || !md->ep_host_cache_ref) {
+	    !md->ep_flow_host_cache_ref || !md->ep_host_cache_ref ||
+	    !md->eg_vsip_enforce_map || !md->eg_vsip_prim_map ||
+	    !md->eg_vsip_ppo_map || !md->eg_vsip_supp_map ||
+	    !md->eg_vsip_except_map ||  !md->ing_vsip_enforce_map ||
+	    !md->ing_vsip_prim_map || !md->ing_vsip_ppo_map ||
+	    !md->ing_vsip_supp_map || !md->ing_vsip_except_map ||
+	    !md->conn_track_cache || !md->packet_metadata_map) {
 		TRN_LOG_ERROR("Failure finding maps objects.");
 		return 1;
 	}
@@ -265,11 +320,23 @@ int trn_agent_bpf_maps_init(struct agent_user_metadata_t *md)
 	md->jmp_table_fd = bpf_map__fd(md->jmp_table_map);
 	md->agentmetadata_map_fd = bpf_map__fd(md->agentmetadata_map);
 	md->endpoints_map_fd = bpf_map__fd(md->endpoints_map);
+	md->packet_metadata_map_fd = bpf_map__fd(md->packet_metadata_map);
 	md->interfaces_map_fd = bpf_map__fd(md->interfaces_map);
 	md->fwd_flow_mod_cache_ref_fd = bpf_map__fd(md->fwd_flow_mod_cache_ref);
 	md->rev_flow_mod_cache_ref_fd = bpf_map__fd(md->rev_flow_mod_cache_ref);
 	md->ep_flow_host_cache_ref_fd = bpf_map__fd(md->ep_flow_host_cache_ref);
 	md->ep_host_cache_ref_fd = bpf_map__fd(md->ep_host_cache_ref);
+	md->eg_vsip_enforce_map_fd	= bpf_map__fd(md->eg_vsip_enforce_map);
+	md->eg_vsip_prim_map_fd		= bpf_map__fd(md->eg_vsip_prim_map);
+	md->eg_vsip_ppo_map_fd		= bpf_map__fd(md->eg_vsip_ppo_map);
+	md->eg_vsip_supp_map_fd		= bpf_map__fd(md->eg_vsip_supp_map);
+	md->eg_vsip_except_map_fd	= bpf_map__fd(md->eg_vsip_except_map);
+	md->ing_vsip_enforce_map_fd	= bpf_map__fd(md->ing_vsip_enforce_map);
+	md->ing_vsip_prim_map_fd	= bpf_map__fd(md->ing_vsip_prim_map);
+	md->ing_vsip_ppo_map_fd		= bpf_map__fd(md->ing_vsip_ppo_map);
+	md->ing_vsip_supp_map_fd	= bpf_map__fd(md->ing_vsip_supp_map);
+	md->ing_vsip_except_map_fd	= bpf_map__fd(md->ing_vsip_except_map);
+	md->conn_track_cache_fd		= bpf_map__fd(md->conn_track_cache);
 
 	if (bpf_map__unpin(md->xdpcap_hook_map, md->pcapfile) == 0) {
 		TRN_LOG_INFO("unpin exiting pcap map file: %s", md->pcapfile);
@@ -281,6 +348,19 @@ int trn_agent_bpf_maps_init(struct agent_user_metadata_t *md)
 		TRN_LOG_ERROR("Failed to pin xdpcap map [%s].", strerror(rc));
 		return 1;
 	}
+
+	// pins the policy maps & conn_track map if not yet
+	bpf_map__pin(md->eg_vsip_enforce_map, eg_vsip_enforce_map_path);
+	bpf_map__pin(md->eg_vsip_prim_map, eg_vsip_prim_map_path);
+	bpf_map__pin(md->eg_vsip_ppo_map, eg_vsip_ppo_map_path);
+	bpf_map__pin(md->eg_vsip_supp_map, eg_vsip_supp_map_path);
+	bpf_map__pin(md->eg_vsip_except_map, eg_vsip_except_map_path);
+	bpf_map__pin(md->ing_vsip_enforce_map, ing_vsip_enforce_map_path);
+	bpf_map__pin(md->ing_vsip_prim_map, ing_vsip_prim_map_path);
+	bpf_map__pin(md->ing_vsip_ppo_map, ing_vsip_ppo_map_path);
+	bpf_map__pin(md->ing_vsip_supp_map, ing_vsip_supp_map_path);
+	bpf_map__pin(md->ing_vsip_except_map, ing_vsip_except_map_path);
+	bpf_map__pin(md->conn_track_cache, conn_track_cache_path);
 
 	return 0;
 }
@@ -342,6 +422,23 @@ static void _trn_refresh_default_maps(void)
 				       TRAN_MAX_CACHE_SIZE, 0);
 }
 
+static int _reuse_pinned_map_if_exists(struct bpf_object *pobj, const char *map_name, const char *pinned_file)
+{
+	int fd_pinned_map = bpf_obj_get(pinned_file);
+	if (fd_pinned_map >= 0) {
+		struct bpf_map *map = bpf_object__find_map_by_name(pobj, map_name);
+		if (!map) {
+			return -ENOENT;
+		}
+
+		if (0 != bpf_map__reuse_fd(map, fd_pinned_map)) {
+			return -EBADF;
+		}
+	}
+
+	return 0;
+}
+
 static int _trn_bpf_agent_prog_load_xattr(struct agent_user_metadata_t *md,
 					  const struct bpf_prog_load_attr *attr,
 					  struct bpf_object **pobj,
@@ -393,6 +490,19 @@ static int _trn_bpf_agent_prog_load_xattr(struct agent_user_metadata_t *md,
 		TRN_LOG_INFO("ep_flow_host_cache_ref inner fd is not set!\n");
 		goto error;
 	}
+
+	// to share the pinned egress policy maps, if applicable
+	_REUSE_MAP_IF_PINNED(eg_vsip_enforce_map);
+	_REUSE_MAP_IF_PINNED(eg_vsip_prim_map);
+	_REUSE_MAP_IF_PINNED(eg_vsip_ppo_map);
+	_REUSE_MAP_IF_PINNED(eg_vsip_supp_map);
+	_REUSE_MAP_IF_PINNED(eg_vsip_except_map);
+	_REUSE_MAP_IF_PINNED(ing_vsip_enforce_map);
+	_REUSE_MAP_IF_PINNED(ing_vsip_prim_map);
+	_REUSE_MAP_IF_PINNED(ing_vsip_ppo_map);
+	_REUSE_MAP_IF_PINNED(ing_vsip_supp_map);
+	_REUSE_MAP_IF_PINNED(ing_vsip_except_map);
+	_REUSE_MAP_IF_PINNED(conn_track_cache);
 
 	/* Only one prog is supported */
 	bpf_object__for_each_program(prog, *pobj)
@@ -480,5 +590,86 @@ int trn_agent_metadata_init(struct agent_user_metadata_t *md, char *itf,
 	}
 	md->prog_id = md->info.id;
 
+	return 0;
+}
+
+int trn_update_agent_network_policy_map(int fd,
+					 struct vsip_cidr_t *ipcidr,
+					 __u64 bitmap)
+{
+	int err = bpf_map_update_elem(fd, ipcidr, &bitmap, 0);
+	if (err) {
+		TRN_LOG_ERROR("Store network policy egress CIDR map failed (err:%d) for ip address 0x%x wit remote cidr 0x%x / %d ",
+			err, ipcidr->local_ip, ipcidr->remote_ip, ipcidr->prefixlen);
+		return 1;
+	}
+	return 0;
+}
+
+int trn_delete_agent_network_policy_map(int fd,
+					 struct vsip_cidr_t *ipcidr)
+{
+	int err = bpf_map_delete_elem(fd, ipcidr);
+	if (err) {
+		TRN_LOG_ERROR("Delete network policy egress CIDR map failed (err:%d) for ip address 0x%x wit remote cidr 0x%x / %d ",
+			err, ipcidr->local_ip, ipcidr->remote_ip, ipcidr->prefixlen);
+		return 1;
+	}
+	return 0;
+}
+
+
+int trn_update_agent_network_policy_enforcement_map(struct agent_user_metadata_t *md,
+						      struct vsip_enforce_t *local,
+						      __u8 isenforce)
+{
+	int err = bpf_map_update_elem(md->eg_vsip_enforce_map_fd, local, &isenforce, 0);
+
+	if (err) {
+		TRN_LOG_ERROR("Update Enforcement egress map failed (err:%d) for ip address 0x%x. \n",
+				err, local->local_ip);
+		return 1;
+	}
+
+	return 0;
+}
+
+int trn_delete_agent_network_policy_enforcement_map(struct agent_user_metadata_t *md,
+						      struct vsip_enforce_t *local)
+{
+	int err = bpf_map_delete_elem(md->eg_vsip_enforce_map_fd, local);
+	if (err) {
+		TRN_LOG_ERROR("Delete Enforcement egress map failed (err:%d) for ip address 0x%x. ",
+				err, local->local_ip);
+		return 1;
+	}
+
+	return 0;
+}
+
+int trn_update_agent_network_policy_protocol_port_map(struct agent_user_metadata_t *md,
+						        struct vsip_ppo_t *policy,
+						        __u64 bitmap)
+{
+	int err = bpf_map_update_elem(md->eg_vsip_ppo_map_fd, policy, &bitmap, 0);
+
+	if (err) {
+		TRN_LOG_ERROR("Update Protocol-Port egress map failed (err:%d) for ip address 0x%x with protocol %d and port %d. \n",
+				err, policy->local_ip, policy->proto, policy->port);
+		return 1;
+	}
+
+	return 0;
+}
+
+int trn_delete_agent_network_policy_protocol_port_map(struct agent_user_metadata_t *md,
+						        struct vsip_ppo_t *policy)
+{
+	int err = bpf_map_delete_elem(md->eg_vsip_ppo_map_fd, policy);
+	if (err) {
+		TRN_LOG_ERROR("Delete Protocol-Port egress map failed (err:%d).for ip address 0x%x with protocol %d and port %d. \n",
+				err, policy->local_ip, policy->proto, policy->port);
+		return 1;
+	}
 	return 0;
 }

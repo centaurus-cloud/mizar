@@ -12,7 +12,14 @@ CLI_MOCKS += -Wl,--wrap=update_vpc_1
 CLI_MOCKS += -Wl,--wrap=update_net_1
 CLI_MOCKS += -Wl,--wrap=update_ep_1
 CLI_MOCKS += -Wl,--wrap=update_agent_ep_1
+CLI_MOCKS += -Wl,--wrap=update_packet_metadata_1
 CLI_MOCKS += -Wl,--wrap=update_agent_md_1
+CLI_MOCKS += -Wl,--wrap=update_transit_network_policy_1
+CLI_MOCKS += -Wl,--wrap=update_agent_network_policy_1
+CLI_MOCKS += -Wl,--wrap=update_transit_network_policy_enforcement_1
+CLI_MOCKS += -Wl,--wrap=update_agent_network_policy_enforcement_1
+CLI_MOCKS += -Wl,--wrap=update_transit_network_policy_protocol_port_1
+CLI_MOCKS += -Wl,--wrap=update_agent_network_policy_protocol_port_1
 CLI_MOCKS += -Wl,--wrap=load_transit_xdp_1
 CLI_MOCKS += -Wl,--wrap=unload_transit_xdp_1
 CLI_MOCKS += -Wl,--wrap=load_transit_agent_xdp_1
@@ -26,7 +33,14 @@ CLI_MOCKS += -Wl,--wrap=delete_vpc_1
 CLI_MOCKS += -Wl,--wrap=delete_net_1
 CLI_MOCKS += -Wl,--wrap=delete_ep_1
 CLI_MOCKS += -Wl,--wrap=delete_agent_ep_1
+CLI_MOCKS += -Wl,--wrap=delete_packet_metadata_1
 CLI_MOCKS += -Wl,--wrap=delete_agent_md_1
+CLI_MOCKS += -Wl,--wrap=delete_transit_network_policy_1
+CLI_MOCKS += -Wl,--wrap=delete_agent_network_policy_1
+CLI_MOCKS += -Wl,--wrap=delete_transit_network_policy_enforcement_1
+CLI_MOCKS += -Wl,--wrap=delete_agent_network_policy_enforcement_1
+CLI_MOCKS += -Wl,--wrap=delete_transit_network_policy_protocol_port_1
+CLI_MOCKS += -Wl,--wrap=delete_agent_network_policy_protocol_port_1
 CLI_MOCKS += -Wl,--wrap=setrlimit
 
 unittest:: test_cli

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: testpod
+  labels:
+    arktos.futurewei.com/network: vpc0
+spec:
+  containers:
+  - name: testpod
+    image: localhost:5000/testpod
+    ports:
+    - containerPort: 80

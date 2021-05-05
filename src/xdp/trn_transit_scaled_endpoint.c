@@ -316,10 +316,13 @@ static __inline int trn_sep_handle_scaled_ep_modify(struct transit_packet *pkt,
 static __inline int trn_scaled_ep_decide(struct transit_packet *pkt)
 {
 	void *endpoints_map = NULL;
+	void *port_map = NULL;
 	void *fwd_flow_mod_cache = NULL;
 	void *rev_flow_mod_cache = NULL;
 	struct endpoint_t *ep = NULL;
 	struct endpoint_key_t epkey = {};
+	struct port_t *port = NULL;
+	struct port_key_t portkey = {};
 	int map_idx = 0;
 	__u32 inhash = 0;
 	__u32 remote_idx = 0;
@@ -328,6 +331,13 @@ static __inline int trn_scaled_ep_decide(struct transit_packet *pkt)
 	endpoints_map = bpf_map_lookup_elem(&endpoints_map_ref, &map_idx);
 	if (!endpoints_map) {
 		bpf_debug("[Scaled_EP:%d:] failed to find endpoints_map\n",
+			  __LINE__);
+		return XDP_ABORTED;
+	}
+
+	port_map = bpf_map_lookup_elem(&port_map_ref, &map_idx);
+	if (!port_map) {
+		bpf_debug("[Scaled_EP:%d:] failed to find port_map\n",
 			  __LINE__);
 		return XDP_ABORTED;
 	}
@@ -346,6 +356,19 @@ static __inline int trn_scaled_ep_decide(struct transit_packet *pkt)
 
 	__builtin_memcpy(&epkey.tunip[0], &tunnel_id, sizeof(tunnel_id));
 	epkey.tunip[2] = pkt->inner_ipv4_tuple.daddr;
+
+	__builtin_memcpy(&portkey.tunip[0], &tunnel_id, sizeof(tunnel_id));
+	portkey.tunip[2] = pkt->inner_ipv4_tuple.daddr;
+	portkey.port = pkt->inner_ipv4_tuple.dport;
+	portkey.protocol = pkt->inner_ipv4_tuple.protocol;
+	port = bpf_map_lookup_elem(port_map, &portkey);
+
+	if (!port) {
+		bpf_debug(
+			"[Scaled_EP:%d:] DROP failed to find scaled endpoint port and protocol.\n",
+			__LINE__);
+		return XDP_DROP;
+	}
 
 	/* Get the scaled endpoint configuration */
 	ep = bpf_map_lookup_elem(endpoints_map, &epkey);
@@ -392,8 +415,7 @@ static __inline int trn_scaled_ep_decide(struct transit_packet *pkt)
 	pkt->scaled_ep_opt->scaled_ep_data.target.sport =
 		pkt->inner_ipv4_tuple.sport;
 
-	pkt->scaled_ep_opt->scaled_ep_data.target.dport =
-		pkt->inner_ipv4_tuple.dport;
+	pkt->scaled_ep_opt->scaled_ep_data.target.dport = port->target_port;
 
 	__builtin_memcpy(&pkt->scaled_ep_opt->scaled_ep_data.target.h_source,
 			 pkt->inner_eth->h_source,

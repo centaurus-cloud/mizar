@@ -2,6 +2,7 @@
 import socket
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
@@ -10,5 +11,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         host = bytes(socket.gethostname(), 'utf-8')
         self.wfile.write(host)
 
-httpd = HTTPServer(('0.0.0.0', 8000), SimpleHTTPRequestHandler)
+
+httpd = HTTPServer(('0.0.0.0', 7000), SimpleHTTPRequestHandler)
 httpd.serve_forever()

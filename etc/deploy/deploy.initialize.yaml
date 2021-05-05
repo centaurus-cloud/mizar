@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2020 The Authors.
+
+# Authors: Hong Chang        <@Hong-Chang>
+#          Sherif Abdelwahab <@zasherif>
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:The above copyright
+# notice and this permission notice shall be included in all copies or
+# substantial portions of the Software.THE SOFTWARE IS PROVIDED "AS IS",
+# WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+# TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+# FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+# THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mizar-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: mizar-operator
+    namespace: default
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mizar-operator
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mizar-initialize
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      job: mizar-initialize
+  template:
+    metadata:
+      labels:
+        job: mizar-initialize
+    spec:
+      hostPID: true
+      restartPolicy: Always
+      serviceAccountName: mizar-operator
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      volumes:
+        - name: mizar
+          hostPath:
+            path: /var
+            type: Directory
+      containers:
+        - image: debian:latest
+          name: mizar-initialize
+          command: [ "/bin/bash", "-c", "--", "while true; do chmod 755/tmp/script-to-run.sh; /tmp/script-to-run.sh; rm -rf /tmp/script-to-run.sh; sleep 3; done;" ]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: mizar
+              mountPath: /home

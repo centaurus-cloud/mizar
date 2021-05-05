@@ -40,6 +40,7 @@
 #define TRAN_SUBSTRT_EP 0
 #define TRAN_SIMPLE_EP 1
 #define TRAN_SCALED_EP 2
+#define TRAN_GATEWAY_EP 3
 
 #define TRAN_MAX_PROG 100
 /* XDP programs keys in transit agent */
@@ -57,6 +58,16 @@ enum trn_xdp_stage_t {
 	XDP_SCALED_EP_PROC
 };
 
+struct port_key_t {
+	__u32 tunip[3];
+	__u16 port;
+	__u8 protocol;
+} __attribute__((packed));
+
+struct port_t {
+	__u16 target_port;
+} __attribute__((packed, aligned(4)));
+
 struct endpoint_key_t {
 	__u32 tunip[3];
 } __attribute__((packed));
@@ -67,6 +78,15 @@ struct endpoint_t {
 	__u32 remote_ips[TRAN_MAX_REMOTES];
 	int hosted_iface;
 	unsigned char mac[6];
+} __attribute__((packed, aligned(4)));
+
+struct packet_metadata_key_t {
+	__u32 tunip[3];
+} __attribute__((packed));
+
+struct packet_metadata_t {
+	__u32 pod_label_value;
+	__u32 namespace_label_value;
 } __attribute__((packed, aligned(4)));
 
 struct network_key_t {
@@ -137,3 +157,33 @@ struct scaled_endpoint_remote_t {
 	unsigned char h_source[6];
 	unsigned char h_dest[6];
 } __attribute__((packed));
+
+struct vsip_enforce_t {
+	__u64 tunnel_id;
+	__be32 local_ip;
+} __attribute__((packed));
+
+struct vsip_cidr_t {
+	__u32 prefixlen;
+	__u64 tunnel_id;
+	__be32 local_ip;
+	__be32 remote_ip;
+} __attribute__((packed));
+
+struct vsip_ppo_t {
+	__u64 tunnel_id;
+	__be32 local_ip;
+	__u8 proto;
+	__be16 port;
+} __attribute__((packed));
+
+struct ipv4_ct_tuple_t {
+	struct vpc_key_t vpc;
+	struct ipv4_tuple_t tuple;
+} __attribute__((packed));
+
+enum conn_status {
+	TRFFIC_DENIED	= 1 << 0,	// traffic is denied (1) or default allowed (0)
+	UNI_DIRECTION 	= 1 << 1,	// reserved; traffic is uni-direction only, or bi-direction
+	FLAG_REEVAL 	= 1 << 2,	// need to re-evaluate allow/deny traffic
+};

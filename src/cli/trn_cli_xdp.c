@@ -149,9 +149,10 @@ int trn_cli_load_transit_subcmd(CLIENT *clnt, int argc, char *argv[])
 	char rpc[] = "load_transit_xdp_1";
 	char xdp_path[1024];
 	char pcapfile[1024];
+	int xdp_flag = XDP_FLAGS_SKB_MODE;
 	xdp_intf.xdp_path = xdp_path;
 	xdp_intf.pcapfile = pcapfile;
-
+	xdp_intf.xdp_flag = xdp_flag;
 	xdp_intf.interface = conf.intf;
 
 	int err = trn_cli_parse_xdp(json_str, &xdp_intf);

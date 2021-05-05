@@ -29,7 +29,6 @@
 #include "extern/xdpcap_hook.h"
 
 #include "trn_datamodel.h"
-
 struct bpf_map_def SEC("maps") jmp_table = {
 	.type = BPF_MAP_TYPE_PROG_ARRAY,
 	.key_size = sizeof(__u32),
@@ -55,6 +54,15 @@ struct bpf_map_def SEC("maps") endpoints_map = {
 	.map_flags = 0,
 };
 BPF_ANNOTATE_KV_PAIR(endpoints_map, struct endpoint_key_t, struct endpoint_t);
+
+struct bpf_map_def SEC("maps") packet_metadata_map = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(struct packet_metadata_key_t),
+	.value_size = sizeof(struct packet_metadata_t),
+	.max_entries = TRAN_MAX_NEP,
+	.map_flags = 0,
+};
+BPF_ANNOTATE_KV_PAIR(packet_metadata_map, struct packet_metadata_key_t, struct packet_metadata_t);
 
 struct bpf_map_def SEC("maps") interfaces_map = {
 	.type = BPF_MAP_TYPE_DEVMAP,
@@ -101,3 +109,8 @@ struct bpf_map_def SEC("maps") ep_host_cache_ref = {
 	.map_flags = 0,
 };
 BPF_ANNOTATE_KV_PAIR(ep_host_cache_ref, int, __u32);
+
+// DONOT change the location of this inlude for now.
+// pinned maps for egress policy checks (shared by transit agent xdp progs)
+// and the global conn_track map
+#include "shared_map_defs.h"

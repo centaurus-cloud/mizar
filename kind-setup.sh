@@ -25,7 +25,7 @@
 function get_status() {
     OBJECT=$1
 
-    kubectl get $OBJECT 2> /tmp/kubetctl.err | awk '
+    kubectl get $OBJECT 2> ${KUBECTL_LOG} | awk '
     NR==1 {
         for (i=1; i<=NF; i++) {
             f[$i] = i
@@ -39,7 +39,7 @@ function get_status() {
 
 # Checks for status Provisioned of array of objects
 function check_ready() {
-    objects=("droplets" "vpcs" "nets" "dividers" "bouncers")
+    objects=("droplets" "vpcs" "subnets" "dividers" "bouncers")
     sum=0
     for i in "${objects[@]}"
     do
@@ -58,32 +58,67 @@ function check_ready() {
 CWD=$(pwd)
 KINDCONF="${HOME}/mizar/build/tests/kind/config"
 MIZARCONF="${HOME}/mizar/build/tests/mizarcni.config"
-KINDHOME="${HOME}/.kube/config"
-USER=${1:-user}
+KINDUSERCONFDIR="${HOME}/.kube"
+KINDUSERCONF="${KINDUSERCONFDIR}/config"
+KUBECTL_LOG="/tmp/${USER}_kubetctl.err"
+MODE=${1:-user}
 NODES=${2:-3}
-timeout=120
+timeout=240
 
-kind delete cluster
-
-if [[ "$USER" == "dev" ]]; then
+if [[ "$MODE" == "dev" ]]; then
     DOCKER_ACC="localhost:5000"
 else
-    DOCKER_ACC="fwnetworking"
+    DOCKER_ACC="mizarnet"
 fi
+
+# Delete old kind cluser, kind docker network, and images.
+kind delete cluster
+imgs=$(docker images -a | grep $DOCKER_ACC | awk '{print $3}')
+for img in ${imgs[@]}; do
+  docker rmi -f $img
+done
+docker rm -f local-kind-registry 2> /dev/null
+docker network rm kind 2> /dev/null
+
+if [[ "$MODE" == "dev" ]]; then
+  make clean
+  make all
+fi
+
+# All interfaces in the network have an MTU of 9000 to
+# simulate a real datacenter. Since all container traffic
+# goes through the docker bridge, we must ensure the bridge
+# interfaces also has the same MTU to prevent ip fragmentation.
+docker network create -d bridge \
+  --subnet=172.18.0.0/16 \
+  --gateway=172.18.0.1 \
+  --opt com.docker.network.driver.mtu=9000 \
+  kind
+
 docker image build -t $DOCKER_ACC/kindnode:latest -f k8s/kind/Dockerfile .
 
-source k8s/kind/create_cluster.sh $KINDCONF $USER $NODES
+source k8s/kind/create_cluster.sh $KINDCONF $MODE $NODES
+
+# Install kubectl
+which kubectl
+if [ $? -ne 0 ]; then
+    k8s_ver="$(docker exec -t kind-control-plane kubelet --version | cut -d'v' -f2 | tr -d '\r')-00"
+    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+    echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    sudo apt-get update -y
+    sudo apt-get install -y kubectl="${k8s_ver}"
+fi
 
 api_ip=`docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane`
 sed "s/server: https:\/\/127.0.0.1:[[:digit:]]\+/server: https:\/\/$api_ip:6443/" $KINDCONF > $MIZARCONF
-ln -snf $KINDCONF $KINDHOME
+ln -snf ${KINDCONF} ${KINDUSERCONF}
 
-source install/create_crds.sh $CWD $USER
-source install/create_service_account.sh $CWD $USER
+source install/create_crds.sh $CWD
+source install/create_service_account.sh $CWD
 
-source install/deploy_daemon.sh $CWD $USER $DOCKER_ACC
-source install/deploy_operator.sh $CWD $USER $DOCKER_ACC
-source install/create_testimage.sh $CWD $USER $DOCKER_ACC
+source install/deploy_daemon.sh $CWD $MODE $DOCKER_ACC
+source install/deploy_operator.sh $CWD $MODE $DOCKER_ACC
+source install/create_testimage.sh $CWD $MODE $DOCKER_ACC
 
 end=$((SECONDS + $timeout))
 echo -n "Waiting for cluster to come up."

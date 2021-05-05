@@ -79,6 +79,41 @@ struct rpc_trn_endpoint_key_t {
        uint32_t ip;
 };
 
+/* Defines an packet metadata */
+struct rpc_trn_packet_metadata_t {
+       string interface<20>;
+       uint32_t ip;
+       uint64_t tunid;
+       uint32_t pod_label_value;
+       uint32_t namespace_label_value;
+};
+
+/* Defines a unique key to get/delete an packet metadata */
+struct rpc_trn_packet_metadata_key_t {
+       string interface<20>;
+       uint64_t tunid;
+       uint32_t ip;
+};
+
+/* Defines a port */
+struct rpc_trn_port_t {
+       string interface<20>;
+       uint32_t ip;
+       uint64_t tunid;
+       uint16_t port;
+       uint16_t target_port;
+       uint8_t protocol;
+};
+
+/* Defines a unique key to get/delete an RP (in DP) */
+struct rpc_trn_port_key_t {
+       string interface<20>;
+       uint64_t tunid;
+       uint32_t ip;
+       uint16_t port;
+       uint8_t protocol;
+};
+
 /* Defines a VPC */
 struct rpc_trn_vpc_t {
        string interface<20>;
@@ -97,6 +132,7 @@ struct rpc_trn_xdp_intf_t {
        string interface<20>;
        string xdp_path<256>;
        string pcapfile<256>;
+       uint8_t xdp_flag;
 };
 
 /* Defines an interface */
@@ -141,6 +177,53 @@ struct rpc_trn_ebpf_prog_stage_t {
        rpc_trn_pipeline_stage stage;
 };
 
+/* Defines a network policy table entry */
+struct rpc_trn_vsip_cidr_t {
+       string interface<20>;
+       uint64_t tunid;
+       uint32_t local_ip;
+       uint32_t cidr_ip;
+       uint32_t cidr_prefixlen;
+       int cidr_type;
+       uint64_t bit_val;
+};
+
+/* Defines a network policy table key */
+struct rpc_trn_vsip_cidr_key_t {
+       string interface<20>;
+       uint64_t tunid;
+       uint32_t local_ip;
+       uint32_t cidr_ip;
+       uint32_t cidr_prefixlen;
+       int cidr_type;
+};
+
+/* Defines a network policy enforcement table key */
+struct rpc_trn_vsip_enforce_t {
+       string interface<20>;
+       uint64_t tunid;
+       uint32_t local_ip;
+};
+
+/* Defines a network policy protocol port table entry */
+struct rpc_trn_vsip_ppo_t {
+       string interface<20>;
+       uint64_t tunid;
+       uint32_t local_ip;
+       uint8_t proto;
+       uint16_t port;
+       uint64_t bit_val;
+};
+
+/* Defines a network policy protocol port table key */
+struct rpc_trn_vsip_ppo_key_t {
+       string interface<20>;
+       uint64_t tunid;
+       uint32_t local_ip;
+       uint8_t proto;
+       uint16_t port;
+};
+
 /*----- Protocol. -----*/
 
 program RPC_TRANSIT_REMOTE_PROTOCOL {
@@ -148,29 +231,47 @@ program RPC_TRANSIT_REMOTE_PROTOCOL {
                 int UPDATE_VPC(rpc_trn_vpc_t) = 1;
                 int UPDATE_NET(rpc_trn_network_t) = 2;
                 int UPDATE_EP(rpc_trn_endpoint_t) = 3;
-                int UPDATE_AGENT_EP(rpc_trn_endpoint_t) = 4;
-                int UPDATE_AGENT_MD(rpc_trn_agent_metadata_t) = 5;
+                int UPDATE_PORT(rpc_trn_port_t) = 4;
+                int UPDATE_AGENT_EP(rpc_trn_endpoint_t) = 5;
+                int UPDATE_AGENT_MD(rpc_trn_agent_metadata_t) = 6;
 
-                int DELETE_VPC(rpc_trn_vpc_key_t) = 6;
-                int DELETE_NET(rpc_trn_network_key_t) = 7;
-                int DELETE_EP(rpc_trn_endpoint_key_t) = 8;
-                int DELETE_AGENT_EP(rpc_trn_endpoint_key_t) = 9;
-                int DELETE_AGENT_MD(rpc_intf_t) = 10;
+                int DELETE_VPC(rpc_trn_vpc_key_t) = 7;
+                int DELETE_NET(rpc_trn_network_key_t) = 8;
+                int DELETE_EP(rpc_trn_endpoint_key_t) = 9;
+                int DELETE_AGENT_EP(rpc_trn_endpoint_key_t) = 10;
+                int DELETE_AGENT_MD(rpc_intf_t) = 11;
 
-                rpc_trn_vpc_t      GET_VPC(rpc_trn_vpc_key_t) = 11;
-                rpc_trn_network_t  GET_NET(rpc_trn_network_key_t) = 12;
-                rpc_trn_endpoint_t GET_EP(rpc_trn_endpoint_key_t) = 13;
-                rpc_trn_endpoint_t GET_AGENT_EP(rpc_trn_endpoint_key_t) = 14;
-                rpc_trn_agent_metadata_t GET_AGENT_MD(rpc_intf_t) = 15;
+                rpc_trn_vpc_t      GET_VPC(rpc_trn_vpc_key_t) = 12;
+                rpc_trn_network_t  GET_NET(rpc_trn_network_key_t) = 13;
+                rpc_trn_endpoint_t GET_EP(rpc_trn_endpoint_key_t) = 14;
+                rpc_trn_endpoint_t GET_AGENT_EP(rpc_trn_endpoint_key_t) = 15;
+                rpc_trn_agent_metadata_t GET_AGENT_MD(rpc_intf_t) = 16;
 
-                int LOAD_TRANSIT_XDP(rpc_trn_xdp_intf_t) = 16;
-                int LOAD_TRANSIT_AGENT_XDP(rpc_trn_xdp_intf_t) = 17;
+                int LOAD_TRANSIT_XDP(rpc_trn_xdp_intf_t) = 17;
+                int LOAD_TRANSIT_AGENT_XDP(rpc_trn_xdp_intf_t) = 18;
 
-                int UNLOAD_TRANSIT_XDP(rpc_intf_t) = 18;
-                int UNLOAD_TRANSIT_AGENT_XDP(rpc_intf_t) = 19;
+                int UNLOAD_TRANSIT_XDP(rpc_intf_t) = 19;
+                int UNLOAD_TRANSIT_AGENT_XDP(rpc_intf_t) = 20;
 
-                int LOAD_TRANSIT_XDP_PIPELINE_STAGE(rpc_trn_ebpf_prog_t) = 20;
-                int UNLOAD_TRANSIT_XDP_PIPELINE_STAGE(rpc_trn_ebpf_prog_stage_t) = 21;
+                int LOAD_TRANSIT_XDP_PIPELINE_STAGE(rpc_trn_ebpf_prog_t) = 21;
+                int UNLOAD_TRANSIT_XDP_PIPELINE_STAGE(rpc_trn_ebpf_prog_stage_t) = 22;
+
+                int UPDATE_TRANSIT_NETWORK_POLICY(rpc_trn_vsip_cidr_t) = 23;
+                int DELETE_TRANSIT_NETWORK_POLICY(rpc_trn_vsip_cidr_key_t) = 24;
+                int UPDATE_TRANSIT_NETWORK_POLICY_ENFORCEMENT(rpc_trn_vsip_enforce_t) = 25;
+                int DELETE_TRANSIT_NETWORK_POLICY_ENFORCEMENT(rpc_trn_vsip_enforce_t) = 26;
+                int UPDATE_TRANSIT_NETWORK_POLICY_PROTOCOL_PORT(rpc_trn_vsip_ppo_t) = 27;
+                int DELETE_TRANSIT_NETWORK_POLICY_PROTOCOL_PORT(rpc_trn_vsip_ppo_key_t) = 28;
+                int UPDATE_AGENT_NETWORK_POLICY(rpc_trn_vsip_cidr_t) = 29;
+                int DELETE_AGENT_NETWORK_POLICY(rpc_trn_vsip_cidr_key_t) = 30;
+                int UPDATE_AGENT_NETWORK_POLICY_ENFORCEMENT(rpc_trn_vsip_enforce_t) = 31;
+                int DELETE_AGENT_NETWORK_POLICY_ENFORCEMENT(rpc_trn_vsip_enforce_t) = 32;
+                int UPDATE_AGENT_NETWORK_POLICY_PROTOCOL_PORT(rpc_trn_vsip_ppo_t) = 33;
+                int DELETE_AGENT_NETWORK_POLICY_PROTOCOL_PORT(rpc_trn_vsip_ppo_key_t) = 34;
+
+                int UPDATE_PACKET_METADATA(rpc_trn_packet_metadata_t) = 35;
+                int DELETE_PACKET_METADATA(rpc_trn_packet_metadata_key_t) = 36;                
+
           } = 1;
 
 } =  0x20009051;

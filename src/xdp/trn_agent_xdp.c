@@ -43,6 +43,7 @@
 #include "trn_datamodel.h"
 #include "trn_agent_xdp_maps.h"
 #include "trn_kern.h"
+#include "conntrack_common.h"
 
 int _version SEC("version") = 1;
 #define SPORT_MAX 6553
@@ -148,6 +149,20 @@ static __inline int trn_encapsulate(struct transit_packet *pkt,
 
 	} else {
 		return XDP_DROP;
+	}
+
+	struct packet_metadata_key_t packet_metadata_key;
+	struct packet_metadata_t *packet_metadata;
+	packet_metadata_key.tunip[0] = metadata->epkey.tunip[0];
+	packet_metadata_key.tunip[1] = metadata->epkey.tunip[1];
+	packet_metadata_key.tunip[2] = metadata->epkey.tunip[2];
+
+	int pod_label_value = 0;
+	int namespace_label_value = 0;
+	packet_metadata = bpf_map_lookup_elem(&packet_metadata_map, &packet_metadata_key);
+	if(packet_metadata){
+		pod_label_value = packet_metadata->pod_label_value;
+		namespace_label_value = packet_metadata->namespace_label_value;
 	}
 
 	/* Readjust the packet size to fit the outer headers */
@@ -280,7 +295,6 @@ static __inline int trn_redirect(struct transit_packet *pkt, __u32 inner_src_ip,
 static __inline int trn_process_inner_ip(struct transit_packet *pkt)
 {
 	pkt->inner_ip = (void *)pkt->inner_eth + pkt->inner_eth_off;
-	__u32 ipproto;
 
 	if (pkt->inner_ip + 1 > pkt->data_end) {
 		bpf_debug("[Agent:%ld.0x%x] ABORTED: Bad offset [%d]\n",
@@ -333,6 +347,37 @@ static __inline int trn_process_inner_ip(struct transit_packet *pkt)
 		pkt->inner_ipv4_tuple.dport = pkt->inner_udp->dest;
 	}
 
+	if (pkt->inner_ipv4_tuple.protocol == IPPROTO_TCP || pkt->inner_ipv4_tuple.protocol == IPPROTO_UDP) {
+		__u8 *tracked_state = get_originated_conn_state(&conn_track_cache, pkt->agent_ep_tunid, &pkt->inner_ipv4_tuple);
+		// todo: only check for bi-directional connections
+		if (NULL != tracked_state){
+			// reply packet is usually allowed, unless re-eval blocks it
+			if (0 != egress_reply_packet_check(pkt->agent_ep_tunid, &pkt->inner_ipv4_tuple, *tracked_state))
+			{
+				bpf_debug("[Agent:%ld.0x%x] ABORTED: packet to 0x%x egress policy denied, reply of a denied conn\n",
+					pkt->agent_ep_tunid,
+					bpf_ntohl(pkt->agent_ep_ipv4),
+					bpf_ntohl(pkt->inner_ip->daddr));
+				return XDP_ABORTED;
+			}
+		} else {
+			// originated-directional packet subjects to policy check, if required so
+			if (0 != egress_policy_check(pkt->agent_ep_tunid, &pkt->inner_ipv4_tuple)) {
+				bpf_debug("[Agent:%ld.0x%x] ABORTED: packet to 0x%x egress policy denied\n",
+					pkt->agent_ep_tunid,
+					bpf_ntohl(pkt->agent_ep_ipv4),
+					bpf_ntohl(pkt->inner_ip->daddr));
+				__u8 conn_denied = (pkt->inner_ipv4_tuple.protocol == IPPROTO_UDP) ? FLAG_REEVAL | TRFFIC_DENIED : TRFFIC_DENIED;
+				conntrack_set_conn_state(&conn_track_cache, pkt->agent_ep_tunid, &pkt->inner_ipv4_tuple, conn_denied);
+				return XDP_ABORTED;
+			}
+
+			// todo: consider to handle error in case it happens
+			__u8 conn_allowed = (pkt->inner_ipv4_tuple.protocol == IPPROTO_UDP) ? FLAG_REEVAL : 0;
+			conntrack_set_conn_state(&conn_track_cache, pkt->agent_ep_tunid, &pkt->inner_ipv4_tuple, conn_allowed);
+		}
+	}
+
 	/* Check if we need to apply a forward flow update */
 
 	struct ipv4_tuple_t in_tuple;
@@ -344,6 +389,7 @@ static __inline int trn_process_inner_ip(struct transit_packet *pkt)
 
 	if (out_tuple) {
 		/* Modify the inner packet accordingly */
+		trn_set_src_dst_port(pkt, out_tuple->sport, out_tuple->dport);
 		trn_set_src_dst_inner_ip_csum(pkt, out_tuple->saddr,
 					      out_tuple->daddr);
 		trn_set_dst_mac(pkt->inner_eth, out_tuple->h_dest);

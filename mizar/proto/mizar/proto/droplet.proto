@@ -1,0 +1,15 @@
+syntax = "proto3";
+package mizar;
+
+import "google/protobuf/empty.proto";
+
+service DropletService {
+  rpc GetDropletInfo(google.protobuf.Empty) returns (Droplet) {}
+}
+
+message Droplet {
+    string name = 1;
+    string ip   = 2;
+    string mac  = 3;
+    string itf  = 4;
+}

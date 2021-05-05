@@ -22,10 +22,9 @@
 # THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 DIR=${1:-.}
-USER=${2:-dev}
 
 # Create the service account
-kubectl apply -f $DIR/mgmt/etc/account/serviceaccount.yaml
+kubectl apply -f $DIR/etc/account/serviceaccount.yaml
 
 # Bind the service account to cluster admin
-kubectl apply -f $DIR/mgmt/etc/account/binding.yaml
+kubectl apply -f $DIR/etc/account/binding.yaml

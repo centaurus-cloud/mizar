@@ -4,16 +4,17 @@ dist: bionic
 
 before_script:
   - sudo apt-get update
-  - sudo apt-get install build-essential 
+  - sudo apt-get install build-essential
   - sudo apt-get install clang-7
   - sudo apt-get install llvm-7
   - sudo apt-get install libelf-dev
-  - sudo apt-get install python3 
+  - sudo apt-get install python3
   - sudo apt-get install python3-pip
+  - sudo apt-get install python3-setuptools
   - sudo apt-get install libcmocka-dev
   - sudo apt-get install lcov
   - sudo apt install docker.io
-  - sudo pip3 install netaddr docker
+  - sudo pip3 install netaddr docker grpcio-tools
   - sudo systemctl unmask docker.service
   - sudo systemctl unmask docker.socket
   - sudo systemctl start docker

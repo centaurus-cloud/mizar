@@ -69,6 +69,8 @@ class droplet:
         self.trn_cli_update_agent_ep = f'''{self.trn_cli} update-agent-ep'''
         self.trn_cli_get_agent_ep = f'''{self.trn_cli} get-agent-ep'''
         self.trn_cli_delete_agent_ep = f'''{self.trn_cli} delete-agent-ep'''
+        self.trn_cli_update_packet_metadata = f'''{self.trn_cli} update-packet-metadata'''
+        self.trn_cli_delete_packet_metadata = f'''{self.trn_cli} delete-packet-metadata'''
 
         self.xdp_path = "/trn_xdp/trn_transit_xdp_ebpf_debug.o"
         self.agent_xdp_path = "/trn_xdp/trn_agent_xdp_ebpf_debug.o"
@@ -441,6 +443,27 @@ ip netns del {ep.ns} \' ''')
     def delete_agent_ep(self, ep, expect_fail=False):
         self.delete_ep(ep, agent=True, expect_fail=expect_fail)
 
+    def delete_packet_metadata(self, ep, agent=False, expect_fail=False):
+        jsonconf = {
+            "tunnel_id": ep.get_tunnel_id(),
+            "ip": ep.get_ip(),
+        }
+        jsonconf = json.dumps(jsonconf)
+        if agent:
+            log_string = "[DROPLET {}]: delete_agent_packet_metadata {} hosted at {}".format(
+                self.id, ep.ip, ep.host.id)
+            cmd = f'''{self.trn_cli_delete_agent_packet_metadata} \'{jsonconf}\''''
+            self.exec_cli_rpc(log_string, cmd, expect_fail)
+        else:
+            cmd = f'''{self.trn_cli_delete_packet_metadata} \'{jsonconf}\''''
+            key = ("packet_metadata " + self.phy_itf, jsonconf)
+            if ep.host is not None:
+                log_string = "[DROPLET {}]: delete_packet_metadata {} hosted at {}".format(
+                    self.id, ep.ip, ep.host.id)
+            else:
+                log_string = "[DROPLET {}]: delete_packet_metadata for a phantom ep {}".format(
+                    self.id, ep.ip)
+
     def update_substrate_ep(self, droplet, expect_fail=False):
         log_string = "[DROPLET {}]: update_substrate_ep for droplet {}".format(
             self.id, droplet.ip)
@@ -472,6 +495,28 @@ ip netns del {ep.ns} \' ''')
     def update_agent_ep(self, itf, expect_fail=False):
         logger.error(
             "[DROPLET {}]: not implemented, no use case for now!".format(self.id))
+
+    def update_packet_metadata(self, ep, expect_fail=False):
+        if ep.host is not None:
+            log_string = "[DROPLET {}]: update_packet_metadata {} hosted at {}".format(
+                self.id, ep.ip, ep.host.id)
+        else:
+            log_string = "[DROPLET {}]: update_packet_metadata for a phantom ep {}".format(
+                self.id, ep.ip)        
+
+        jsonconf = {
+            "tunnel_id": ep.get_tunnel_id(),
+            "ip": ep.get_ip(),
+            "pod_label_value": ep.get_pod_label_value(),
+            "namespace_label_value": ep.get_namespace_label_value()
+        }
+        jsonconf = json.dumps(jsonconf)
+        jsonkey = {
+            "tunnel_id": ep.get_tunnel_id(),
+            "ip": ep.get_ip(),
+        }
+        key = ("packet_metadata " + self.phy_itf, json.dumps(jsonkey))
+        cmd = f'''{self.trn_cli_update_packet_metadata} \'{jsonconf}\''''
 
     def update_agent_metadata(self, itf, ep, net, expect_fail=False):
         log_string = "[DROPLET {}]: update_agent_metadata on {} for endpoint {}".format(

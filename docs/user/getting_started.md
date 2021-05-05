@@ -68,7 +68,7 @@ If you are testing out Mizar with Kind, a script has been included to setup a lo
 Simply run the script below in the Mizar directory.
 
 ```
-$ sudo ./kind_setup.sh
+$ ./kind-setup.sh
 ```
 
 This script does the following:
@@ -79,6 +79,24 @@ This script does the following:
 * Deploy the Mizar [Operators](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 * Deploy the Mizar Daemon
 * Install the Mizar CNI Plugin
+
+### Install Mizar as Kubernetes CNI plugin
+Mizar can be installed as network plugin to any Kubernetes cluster. Below has been verified to work for Ubuntu 20.04.1 LTS (on AWS EC2 VM).
+
+If a Kuberneetes cluster has kube-proxy daemonSet running, the simple one line would have Mizar installed:
+```bash
+kubectl apply -f https://raw.githubusercontent.com/CentaurusInfra/mizar/dev-next/etc/deploy/deploy.mizar.components.yaml
+```
+
+If the cluster has no kube-proxy (e.g. cluster being started using kubeadm init --skip-phases=addon/kube-proxy), you need to run below first:
+```bash
+kubectl create configmap mizar-k8s-config --from-literal=k8sapihost="<kube-api-server-ip>" --from-literal=k8sapiport="<kube-api-server-port>"
+```
+where the kube-api-server-ip and kube-api-server-port can be identified by ```kubectl get endpoint kubernetes```,
+then run following command to have Mizar plugin installed
+```bash
+kubectl apply -f https://raw.githubusercontent.com/CentaurusInfra/mizar/dev-next/etc/deploy/deploy.mizar.components.direct-api-access.yaml
+```
 
 ### Linux Kernel Update
 
@@ -104,7 +122,7 @@ $ kubectl get vpcs
  * Get all Networks in the cluster
 
 ```
-$ kubectl get nets
+$ kubectl get subnets
 ```
 
  * Get all Dividers in the cluster

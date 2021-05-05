@@ -1,0 +1,85 @@
+syntax = "proto3";
+package mizar;
+
+import "google/protobuf/empty.proto";
+
+service InterfaceService {
+  rpc InitializeInterfaces(InterfacesList) returns (InterfacesList) {}
+  rpc ProduceInterfaces(InterfacesList) returns (InterfacesList) {}
+  rpc ConsumeInterfaces(CniParameters) returns (InterfacesList) {}
+  rpc ActivateHostInterface(Interface) returns (Interface) {}
+  rpc DeleteInterface(CniParameters) returns (google.protobuf.Empty) {}
+}
+
+message PodId {
+  string k8s_pod_name = 1;
+  string k8s_namespace = 2;
+  string k8s_pod_tenant = 3;
+}
+
+enum PodProvider {
+  K8S = 0;
+  ARKTOS = 1;
+}
+
+message InterfaceId {
+  PodId pod_id = 1;
+  string interface =2;
+}
+
+enum InterfaceType {
+  veth = 0;
+  macvlan = 1;
+  ovsport = 2;
+}
+
+enum InterfaceStatus {
+  init = 0;
+  queued = 1;
+  consumed = 2;
+}
+
+message InterfaceAddress {
+  string version = 1;
+  string ip_address = 2;
+  string ip_prefix = 3;
+  string gateway_ip = 4;
+  string mac = 5;
+  string tunnel_id = 6;
+}
+
+message VethInterface {
+  string name = 1;
+  string peer = 2;
+}
+
+message SubstrateAddress {
+  string version = 1;
+  string ip_address = 2;
+  string mac = 3;
+}
+
+message CniParameters {
+  PodId pod_id = 1;
+  string netns = 2;
+  string interface = 3;
+}
+
+message Interface {
+  InterfaceId interface_id = 1;
+  InterfaceType  interface_type = 2;
+  PodProvider pod_provider = 3;
+  VethInterface veth = 4;
+  InterfaceAddress address = 5;
+  SubstrateAddress droplet = 6;
+  repeated SubstrateAddress bouncers = 7;
+  InterfaceStatus status = 8;
+  string pod_label_value = 9;
+  string namespace_label_value = 10;
+}
+
+message InterfacesList {
+  repeated Interface interfaces = 1;
+}
+
+

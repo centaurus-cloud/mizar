@@ -1,7 +1,7 @@
 site_name: Mizar Project
 docs_dir: 'docs'
 site_dir: '.tmp/documentation'
-repo_url: https://github.com/futurewei-cloud/mizar
+repo_url: https://github.com/CentaurusInfra/mizar
 theme:
     name: readthedocs
     highlightjs: true
@@ -28,6 +28,7 @@ nav:
         - 'IP Address Management': 'design/mp_ipam.md'
         - 'Other Data-plane support': 'design/mp_dpsupport.md'
     - Releases:
+        - '0.4': 'CHANGELOG/CHANGELOG-0.4.md'
         - '0.3': 'CHANGELOG/CHANGELOG-0.3.md'
         - '0.2': 'CHANGELOG/CHANGELOG-0.2.md'
         - '0.1': 'CHANGELOG/CHANGELOG-0.1.md'

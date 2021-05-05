@@ -3,6 +3,7 @@ import unittest
 from teste2e.common.k8s import *
 from teste2e.common.helper import *
 
+
 class test_basic_simple_endpoint(unittest.TestCase):
 
     def setUp(self):

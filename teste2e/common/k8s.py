@@ -7,6 +7,7 @@ from teste2e.common.k8spod import *
 from teste2e.common.k8sservice import *
 from kubernetes.stream.ws_client import ERROR_CHANNEL, STDOUT_CHANNEL, STDERR_CHANNEL
 
+
 class k8sCluster:
     _instance = None
 
@@ -35,6 +36,7 @@ class k8sCluster:
         logger.info("Delete test cluster")
         run_cmd("kind delete cluster")
 
+
 class k8sApi:
 
     def __init__(self):
@@ -54,7 +56,7 @@ class k8sApi:
     def delete_net(self, name):
         self.api.delete_net(name)
 
-    def create_pod(self, name, scaledep = ''):
+    def create_pod(self, name, scaledep=''):
         pod_manifest = {
             'apiVersion': 'v1',
             'kind': 'Pod',
@@ -87,7 +89,7 @@ class k8sApi:
 
     def delete_pod(self, name):
         self.k8sapi.delete_namespaced_pod(name=name, namespace='default',
-                                        grace_period_seconds=0)
+                                          grace_period_seconds=0)
 
         deleted = False
         while deleted:
@@ -130,18 +132,28 @@ class k8sApi:
             'metadata': {
                 'labels': {
                     'name': name
-                    },
+                },
                 'name': name,
                 'resourceversion': 'v1',
                 'annotations': {
-                        'service.beta.kubernetes.io/mizar-scaled-endpoint-type': "scaled-endpoint"
-                    }
+                    'service.beta.kubernetes.io/mizar-scaled-endpoint-type': "scaled-endpoint"
+                }
             },
             'spec': {
                 'ports': [
-                    {'port': 80,
-                    'protocol': 'TCP'}],
-            'selector': {'scaledep': name}
+                    {'name': 'http',
+                     'port': 8000,
+                     'targetPort': 7000,
+                     'protocol': 'TCP'},
+                    {'name': 'tcp',
+                     'port': 8001,
+                     'targetPort': 9001,
+                     'protocol': 'TCP'},
+                    {'name': 'udp',
+                     'port': 8002,
+                     'targetPort': 5001,
+                     'protocol': 'UDP'}],
+                'selector': {'scaledep': name}
             }
         }
 
@@ -160,12 +172,13 @@ class k8sApi:
 
     def delete_service(self, name):
         self.k8sapi.delete_namespaced_service(name=name, namespace='default',
-                                        grace_period_seconds=0)
+                                              grace_period_seconds=0)
 
         deleted = False
         while deleted:
             try:
-                self.k8sapi.read_namespaced_service(name=name, namespace='default')
+                self.k8sapi.read_namespaced_service(
+                    name=name, namespace='default')
             except:
                 deleted = True
         logger.info("Deleted {}".format(name))

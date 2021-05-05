@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-modules := src test teste2e
+modules := src test teste2e mizar
 build := build
 
 CC = gcc
@@ -71,12 +71,12 @@ CLANGFLAGS= -I.\
 			-Wno-compare-distinct-pointer-types \
 			-Wno-gnu-variable-sized-type-not-at-end \
 			-Wno-address-of-packed-member -Wno-tautological-compare \
-			-Wno-unknown-warning-option -O3 -emit-llvm -c -o -
+			-Wno-unknown-warning-option -O1 -emit-llvm -c -o -
 
 CLANGFLAGS_DEBUG:= -DDEBUG -D__KERNEL__ -g -D__BPF_TRACING__ $(CLANGFLAGS)
 
 #all:  rpcgen transit transitd xdp
-all:: dirmake update_modules libbpf
+all:: dirmake update_modules libbpf proto
 
 .PHONY: update_modules
 update_modules:
@@ -114,6 +114,9 @@ lcov:gcov
 	lcov --remove lcov/transit_cov.info '/usr/*' '*src/rpcgen/*' '*src/extern/*' -o lcov/transit_cov_filtered.info
 	genhtml lcov/transit_cov_filtered.info -o lcov/report
 	@echo "see lcov/report/index.html"
+
+.PHONY: mgmt_tests
+mizar::
 
 dirmake:
 	mkdir -p core

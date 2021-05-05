@@ -3,6 +3,7 @@ import unittest
 from teste2e.common.k8s import *
 from teste2e.common.helper import *
 
+
 class test_basic_scaled_endpoint(unittest.TestCase):
 
     def setUp(self):
@@ -24,7 +25,7 @@ class test_basic_scaled_endpoint(unittest.TestCase):
         self.api.delete_pod(self.test_name + "ep3")
 
     def test_basic_scaled_endpoint(self):
-        self.assertTrue(self.ep1.do_ping(self.sep1))
-        self.assertTrue(self.ep1.do_curl_hostname(self.sep1))
-        self.assertTrue(self.ep1.do_tcp_hostname(self.sep1))
-        self.assertTrue(self.ep1.do_udp_hostname(self.sep1))
+        # self.assertTrue(self.ep1.do_ping(self.sep1))
+        self.assertTrue(self.ep1.do_curl_hostname(self.sep1, "scaled"))
+        self.assertTrue(self.ep1.do_tcp_hostname(self.sep1, "scaled"))
+        self.assertTrue(self.ep1.do_udp_hostname(self.sep1, "scaled"))

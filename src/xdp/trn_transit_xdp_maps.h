@@ -33,6 +33,7 @@
 #define MAX_NETS 16385
 #define MAX_EP 65537
 #define MAX_VPC 8192
+#define MAX_PORTS 65536
 
 struct bpf_map_def SEC("maps") jmp_table = {
 	.type = BPF_MAP_TYPE_PROG_ARRAY,
@@ -68,6 +69,15 @@ struct bpf_map_def SEC("maps") endpoints_map = {
 	.map_flags = 0,
 };
 BPF_ANNOTATE_KV_PAIR(endpoints_map, struct endpoint_key_t, struct endpoint_t);
+
+struct bpf_map_def SEC("maps") port_map = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(struct port_key_t),
+	.value_size = sizeof(struct port_t),
+	.max_entries = MAX_PORTS,
+	.map_flags = 0,
+};
+BPF_ANNOTATE_KV_PAIR(port_map, struct port_key_t, struct port_t);
 
 struct bpf_map_def SEC("maps") hosted_endpoints_iface_map = {
 	.type = BPF_MAP_TYPE_HASH,
@@ -132,3 +142,8 @@ BPF_ANNOTATE_KV_PAIR(ep_host_cache, struct endpoint_key_t,
 		     struct remote_endpoint_t);
 
 struct bpf_map_def SEC("maps") xdpcap_hook = XDPCAP_HOOK();
+
+// DONOT change the location of this inlude for now.
+// pinned maps for egress policy checks (shared by transit agent xdp progs)
+// and the global conn_track map
+#include "shared_map_defs.h"
