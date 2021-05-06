@@ -5,7 +5,19 @@
 echo Setup: Install go \(currently limited to version 1.13.9\)
 
 sudo apt-get update -y -q
-sudo apt-get install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev -y -q
+sudo apt-get install build-essential -y -q
+sudo apt-get install zlib1g-dev -y -q
+sudo apt-get install libreadline-gplv2-dev -y -q
+sudo apt-get install libncursesw5-dev -y -q
+sudo apt-get install libssl-dev -y -q
+sudo apt-get install libnss3-dev -y -q
+sudo apt-get install libsqlite3-dev -y -q
+sudo apt-get install tk-dev -y -q
+sudo apt-get install libgdbm-dev -y -q
+sudo apt-get install libc6-dev -y -q
+sudo apt-get install libbz2-dev -y -q
+sudo apt-get install libreadline-dev -y -q
+sudo apt-get install libffi-dev -y -q
 
 cd /tmp
 wget https://dl.google.com/go/go1.13.9.linux-amd64.tar.gz
@@ -55,8 +67,8 @@ echo Setup: Install crictl
 
 cd /tmp
 wget https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.17.0/crictl-v1.17.0-linux-amd64.tar.gz
-sudo tar zxvf crictl-v1.17.0-linux-amd64.tar.gz -C /usr/local/bin 
-rm -f crictl-v1.17.0-linux-amd64.tar.gz 
+sudo tar -zxvf crictl-v1.17.0-linux-amd64.tar.gz -C /usr/local/bin
+rm -f crictl-v1.17.0-linux-amd64.tar.gz
 
 touch /tmp/crictl.yaml
 echo runtime-endpoint: unix:///run/containerd/containerd.sock >> /tmp/crictl.yaml
@@ -78,22 +90,23 @@ echo Setup: Install miscellaneous
 wget -O $HOME/Python-3.8.8.tgz https://www.python.org/ftp/python/3.8.8/Python-3.8.8.tgz
 tar -C $HOME -xzf $HOME/Python-3.8.8.tgz
 cd $HOME/Python-3.8.8
-sudo ./configure
+sudo ./configure --enable-optimizations
 sudo make
-sudo make install
+sudo make altinstall
 sudo ln -sfn /usr/local/bin/python3.8 /usr/bin/python3
 sudo apt remove -fy python3-apt
 sudo apt install -fy python3-apt
 sudo apt update
 sudo apt install -fy python3-pip
-sudo sed -i '1c\#!/usr/bin/python3.8 -Es' /usr/bin/lsb_release
-sudo /usr/local/bin/python3.8 -m pip install --upgrade pip -y -q
 
-sudo rm -rf $HOME/Python-3.8.8.tgz
-sudo rm -rf $HOME/Python-3.8.8
+sudo sed -i '1c\#!/usr/bin/python3.6 -Es' /usr/bin/lsb_release
+sudo /usr/local/bin/python3.8 -m pip install --upgrade pip
 
 sudo apt install awscli -y -q
 sudo apt install jq -y -q
+
+sudo rm -rf $HOME/Python-3.8.8.tgz
+sudo rm -rf $HOME/Python-3.8.8
 
 ####################
 
@@ -109,7 +122,6 @@ sudo apt-get install -y \
     libcmocka-dev \
     lcov
 
-sudo apt install docker.io
 sudo pip3 install netaddr docker scapy
 sudo systemctl unmask docker.service
 sudo systemctl unmask docker.socket
@@ -149,17 +161,7 @@ echo Setup: Install Containerd
 cd $HOME
 wget https://github.com/containerd/containerd/releases/download/v1.4.2/containerd-1.4.2-linux-amd64.tar.gz
 cd /usr
-sudo tar xvf $HOME/containerd-1.4.2-linux-amd64.tar.gz
-
-cd $HOME/go/src/k8s.io/arktos
-wget -qO- https://github.com/futurewei-cloud/containerd/releases/download/tenant-cni-args/containerd.zip | zcat > /tmp/containerd
-sudo chmod +x /tmp/containerd
-sudo systemctl stop containerd
-sudo mv /usr/bin/containerd /usr/bin/containerd.bak
-sudo mv /tmp/containerd /usr/bin/
-sudo systemctl restart containerd
-sudo systemctl restart docker
-
+sudo tar -xvf $HOME/containerd-1.4.2-linux-amd64.tar.gz
 sudo rm -rf $HOME/containerd-1.4.2-linux-amd64.tar.gz
 
 ####################
@@ -183,6 +185,7 @@ echo alias kubeop=\"kubectl get pods \|\ grep mizar-operator \|\ awk \'{print \$
 echo alias kubed=\"kubectl get pods \|\ grep mizar-daemon \|\ awk \'{print \$1}\' \|\ xargs -i kubectl logs {}\"  >> ~/.profile
 echo export CONTAINER_RUNTIME_ENDPOINT=\"\containerRuntime,container,/run/containerd/containerd.sock\" >> ~/.profile
 echo export PYTHONPATH=\"\$HOME/mizar/\" >> ~/.profile
+echo export KUBECTL_LOG=\"\/tmp/${USER}_kubetctl.err\" >> ~/.profile
 echo export GPG_TTY=\$\(tty\) >> ~/.profile
 
 echo cd \$HOME/go/src/k8s.io/arktos >> ~/.profile

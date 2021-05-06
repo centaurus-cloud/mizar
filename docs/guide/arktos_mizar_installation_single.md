@@ -35,7 +35,7 @@ For more details on Arktos installation, please refer to [this link](https://git
 
 ```bash
 cd
-git clone https://github.com/centaurus-cloud/mizar.git
+git clone https://github.com/CentaurusInfra/mizar.git
 cd mizar
 chmod 755 setup-machine-arktos.sh
 ./setup-machine-arktos.sh
@@ -43,6 +43,7 @@ chmod 755 setup-machine-arktos.sh
 The lab machine will be rebooted once above script is completed, you will be automatically logged out of the lab machine. 
 
 2. Log onto your lab machine, then run ```bootstrap.sh``` script from the mizar project folder to bootstrap your lab machine. 
+
 
 3. Once bootstrap is completed, you can then compile mizar. Make sure run these in ```sudo``` mode: 
 
@@ -52,52 +53,24 @@ sudo su
 make
 ```
 
-4. Modify your lab machine's network configurations: 
-
-please ensure the hostname and its ip address in ```/etc/hosts```. For instance, if the hostname is ip-172-31-41-177, ip address is 172.31.41.177:
-```text
-127.0.0.1 localhost
-172.31.41.177 ip-172-31-41-177
-```
-
-5. Build arktos-network-controller (as it is not part of arktos-up.sh yet)
+4. Build arktos-network-controller (as it is not part of arktos-up.sh yet)
 
 ```bash
 cd $HOME/go/src/k8s.io/arktos
 sudo ./hack/setup-dev-node.sh
 make all WHAT=cmd/arktos-network-controller
-sudo rm -f /etc/resolv.conf
-sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
+```
+Also, please ensure the hostname and its ip address in /etc/hosts. For instance, if the hostname is ip-172-31-41-177, ip address is 172.31.41.177:
+```text
+127.0.0.1 localhost
+172.31.41.177 ip-172-31-41-177
 ```
 
-6. Update containerd version to v1.4.2
+5. Replace the Arktos containerd:
 
 ```bash
-cd $HOME
-wget https://github.com/containerd/containerd/releases/download/v1.4.2/containerd-1.4.2-linux-amd64.tar.gz
-cd /usr 
-sudo tar xvf $HOME/containerd-1.4.2-linux-amd64.tar.gz
-```
-
-To confirm if containerd version is successfully updated, run: 
-
-```bash
-❯ containerd --version
-containerd github.com/containerd/containerd v1.4.2 b321d358e6eef9c82fa3f3bb8826dca3724c58c6
-```
-
-7. Replace the Artos containerd:
-
-```bash
-cd $HOME/go/src/k8s.io/arktos
-wget -qO- https://github.com/futurewei-cloud/containerd/releases/download/tenant-cni-args/containerd.zip | zcat > /tmp/containerd
-sudo chmod +x /tmp/containerd
-sudo systemctl stop containerd
-sudo mv /usr/bin/containerd /usr/bin/containerd.bak
-sudo mv /tmp/containerd /usr/bin/
-sudo systemctl restart containerd
-sudo systemctl start docker
-export CONTAINER_RUNTIME_ENDPOINT="containerRuntime,container,/run/containerd/containerd.sock"
+cd $HOME/mizar
+./replace-containerd.sh
 ```
 
 To make sure containerd is running as expected, run: 
@@ -106,7 +79,7 @@ To make sure containerd is running as expected, run:
 sudo systemctl status containerd.service
 ```
 
-8. Before deploying Mizar, you will need first start up Arktos API server: 
+6. Before deploying Mizar, you will need first start up Arktos API server: 
 
 ```bash
 cd $HOME/go/src/k8s.io/arktos
@@ -135,7 +108,13 @@ Alternatively, you can write to the default kubeconfig:
   cluster/kubectl.sh
 ```
 
-9. Once you see above text, your arktos server is now running. 
+7. Deploy Mizar. Open a new terminal window, and run: 
+```bash
+cd $HOME/mizar
+./deploy-mizar.sh
+```
+
+8. Once your arktos server and mizar are running. 
 To verify, you can open a new terminal and run ```kubectl get nodes```, you should see a node running with the name starts with "ip" followed by the private ip address of your lab machine. 
 
 You also want make sure the default kubernetes bridge network configuration file is deleted: 
@@ -145,7 +124,7 @@ sudo ls /etc/cni/net.d
 sudo rm /etc/cni/net.d/bridge.conf
 ```
 
-10. Start Arktos network controller. From a new terminal window, run:
+9. Start Arktos network controller. From a new terminal window, run:
 
 ```bash
 cd $HOME/go/src/k8s.io/arktos
@@ -153,33 +132,7 @@ cd $HOME/go/src/k8s.io/arktos
 ```
 where the ```kube-apiserver-ip``` is your lab machine's **private ip address**
 
-11. Set Arktos and Mizar alias: 
-
-```bash
-alias kubectl='$HOME/go/src/k8s.io/arktos/cluster/kubectl.sh'
-alias kubeop="kubectl get pods | grep mizar-operator | awk '{print \$1}' | xargs -i kubectl logs {}"
-alias kubed="kubectl get pods | grep mizar-daemon | awk '{print \$1}' | xargs -i kubectl logs {}"
-```
-
-12. Deploy Mizar. Open a new terminal window, and run: 
-```bash
-cd $HOME/mizar
-./deploy-mizar.sh
-```
-
 Please refer to [Running Mizar Management Plane](https://mizar.readthedocs.io/en/latest/user/getting_started/#running-mizar-management-plane) for how to inspect resources. 
-
-13. Restart containerd 
-
-```bash
-sudo systemctl restart containerd.service
-```
-
-To make sure containerd is running as expected, run: 
-
-```bash
-sudo systemctl status containerd.service
-```
 
 ## Test
 
